@@ -2,7 +2,7 @@
 
 /**
  * @author       Kalashnikov Ilya <veddbrus@mail.ru>
- * @copyright    2017 © Web-applications.ru
+ * @copyright    2017 © Kalashnikov Ilya (web-applications.ru)
  */
 
 // TODO: use babel
@@ -16,7 +16,8 @@ class Main {
 	
 	constructor(sDOMElementId = null) {
 		
-		Main._instance = this;
+		Main._instance = this; // TODO: DEL
+		let self = this;
 	
 		this.oGame = null;
 
@@ -63,9 +64,16 @@ class Main {
 					}
 				},
 				scene: {
-					preload: this.fPreload,
-					create: this.fCreate,
-					update: this.fUpdate
+					preload: function() {
+						self.oGame = this; // TODO: Почему местный this отличается от oGame_what_is_this (см. ниже) ?
+						self.fPreload(this);
+					},
+					create: function() {
+						self.fCreate(this);
+					},
+					update: function() {
+						self.fUpdate(this);
+					}
 					//,render: oMyGameTest.fRender
 				}
 			};
@@ -76,42 +84,37 @@ class Main {
 		}.bind(this));
 	}
 	
+	// TODO: DEL
 	static getInstance() {
 		return Main._instance;
 	}
 	
-	fPreload() {
-		let oGame = this;
-		let self = Main.getInstance();
-		let oGraphic = self.oGraphic;
-		let oArea = self.oArea;
-		
-		self.oGame = oGame; // TODO: Почему местный this отличается от oGame_what_is_this (см. выше) ?
-		ButtonRetro.oGame = oGame;
+	fPreload(oGame) {
+		let oGraphic = this.oGraphic;
+		let oArea = this.oArea;
 		
 		oGraphic.preload(oGame, oArea);
 		
-		oGame.load.audio('theme', ['audio/level' + self.iLevel + '.mp3']);
+		oGame.load.audio('theme', ['audio/level' + this.iLevel + '.mp3']);
 		oGame.load.audioSprite('sfx', ['audio/fx_mixdown.mp3'], 'audio/fx_mixdown.json');
 	}
 	
-	fCreate() {
+	fCreate(oGame) {
 		
-		let oGame = this;
-		let self = Main.getInstance();
-		let oGraphic = self.oGraphic;
-		let oArea = self.oArea;
+		let self = this;
+		let oGraphic = this.oGraphic;
+		let oArea = this.oArea;
 		
 		oGraphic.init(oGame);
 		oArea.init(oGame, oGraphic);
 		
-		oGame.physics.add.overlap(oArea.oEnemies, oArea.oStars, self.collectStarByEnemy, null, self);
-		oGame.physics.add.overlap(oArea.oPlayer, oArea.oStars, self.collectStarByPlayer, null, self);
-		oGame.physics.add.overlap(oArea.oPlayer, oArea.oArmors, self.collectArmorByPlayer, null, self);
-		oGame.physics.add.overlap(oArea.oEnemies, oArea.oArmors, self.collectArmorByEnemy, null, self);
-		oGame.physics.add.overlap(oArea.oStars, oArea.oBombs, self.collectStarByBomb, null, self);
-		oGame.physics.add.overlap(oArea.oArmors, oArea.oBombs, self.collectArmorByBomb, null, self);
-		oGame.physics.add.collider(oArea.oPlayer, oArea.oBombs, self.bombHit, null, self);
+		oGame.physics.add.overlap(oArea.oEnemies, oArea.oStars, this.collectStarByEnemy, null, this);
+		oGame.physics.add.overlap(oArea.oPlayer, oArea.oStars, this.collectStarByPlayer, null, this);
+		oGame.physics.add.overlap(oArea.oPlayer, oArea.oArmors, this.collectArmorByPlayer, null, this);
+		oGame.physics.add.overlap(oArea.oEnemies, oArea.oArmors, this.collectArmorByEnemy, null, this);
+		oGame.physics.add.overlap(oArea.oStars, oArea.oBombs, this.collectStarByBomb, null, this);
+		oGame.physics.add.overlap(oArea.oArmors, oArea.oBombs, this.collectArmorByBomb, null, this);
+		oGame.physics.add.collider(oArea.oPlayer, oArea.oBombs, this.bombHit, null, this);
 		
 		/*let bTap = false;
 		let aY = [], qY = 30, iY = 0, iYprev;
@@ -152,19 +155,19 @@ class Main {
 			for (var i = 0; i < qY; i++) aY[i] = 0;*/
 		});
 		
-		self.oCursors = oGame.input.keyboard.createCursorKeys();
+		this.oCursors = oGame.input.keyboard.createCursorKeys();
 		
 		oGame.cameras.main.setBounds(-100, -100, oGraphic.sizeXpx + 200, oGraphic.sizeYpx + 200);
 		oGame.cameras.main.startFollow(oArea.oPlayer);
 		
 		let bMusicPrevious;
-		new ButtonRetro({
+		new ButtonRetro(oGame, {
 			name: "pause",
 			title: "PAUSE",
 			scrollFactor: [0,0], scale: [1.6,2],
 			x: oGraphic.screenWidth - 140, y: oGraphic.screenHeight - 50,
 			text: { x: 17, y: 12, tint: 0xaaaaaa },
-			click: function() {
+			click: function() { // this => [ButtonRetro object]
 				if (self.bPause) {
 					this.setText("PAUSE");
 					oGame.physics.resume();
@@ -181,7 +184,7 @@ class Main {
 			}
 		});
 		
-		new ButtonRetro({
+		new ButtonRetro(oGame, {
 			name: "music",
 			title: "MUSIC ON",
 			scrollFactor: [0,0], scale: [2.3,2],
@@ -201,35 +204,35 @@ class Main {
 		});
 		
 		oGame.input.on('gameobjectover', function (oPointer, oGameObject) {
-			if (ButtonRetro.oaCallbacks[oGameObject.name]) {
+			if (ButtonRetro.hasCallback(oGameObject.name)) {
 				oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 0);
 			}
 		});
 		oGame.input.on('gameobjectout', function (oPointer, oGameObject) {
-			if (ButtonRetro.oaCallbacks[oGameObject.name]) {
+			if (ButtonRetro.hasCallback(oGameObject.name)) {
 				oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 1);
 			}
 		});
 		oGame.input.on('gameobjectdown', function (oPointer, oGameObject) {
-			if (ButtonRetro.oaCallbacks[oGameObject.name]) {
+			if (ButtonRetro.hasCallback(oGameObject.name)) {
 				oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 2);
 			}
-		}, this);
-		oGame.input.on('gameobjectup', function (oPointer, oGameObject) {
-			if (ButtonRetro.oaCallbacks[oGameObject.name]) {
-				oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 0);
-				ButtonRetro.oaCallbacks[oGameObject.name].fCallback.call( ButtonRetro.oaCallbacks[oGameObject.name].oInstance );
-			}
 		});
+		oGame.input.on('gameobjectup', function (oPointer, oGameObject) {
+			if (ButtonRetro.hasCallback(oGameObject.name)) {
+				oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 0);
+				ButtonRetro.callback(oGameObject.name);
+			}
+		}, this);
 		
-		self.oScoreText = oGame.add.bitmapText(16, 16, 'font_retro', 'SCORE:0/' + self.iScoreTarget)
+		this.oScoreText = oGame.add.bitmapText(16, 16, 'font_retro', 'SCORE:0/' + self.iScoreTarget)
 			.setTint(0xffff00)
 			.setScrollFactor(0);
 		//Phaser.Display.Align.In.TopLeft(oScoreText, oLand); // TODO: м.б. как-то попроще можно сделать?
 		
 		//var oBounds = oScoreTargetText.getTextBounds(); // TODO: bounds.global.width, bounds.global.height
 		
-		self.oHealthText = oGame.add.bitmapText(oGraphic.screenWidth - 220, 16, 'font_retro', ' HEALTH:100%')
+		this.oHealthText = oGame.add.bitmapText(oGraphic.screenWidth - 220, 16, 'font_retro', ' HEALTH:100%')
 			.setTint(0xffffff).setScrollFactor(0);
 		
 		let oLevelText = oGame.add.text(
@@ -238,30 +241,28 @@ class Main {
 		).setScrollFactor(0);
 		setTimeout( function() { oLevelText.destroy(); }, 3000);
 		
-		self.oMusic = oGame.sound.add('theme');
-		self.music(self.bMusic);
+		this.oMusic = oGame.sound.add('theme');
+		this.music(this.bMusic);
 		
-		//var spritemap = this.cache.json.get('sfx').spritemap;
+		//let spritemap = oGame.cache.json.get('sfx').spritemap;
 	}
 
-	fUpdate() {
+	fUpdate(oGame) {
 		
-		let oGame = this;
-		let self = Main.getInstance();
-		let oGraphic = self.oGraphic;
-		let oArea = self.oArea;
+		//let oGraphic = this.oGraphic;
+		let oArea = this.oArea;
 		
-		if (self.oCursors.left.isDown) { // || (bTouchLeft)) {
+		if (this.oCursors.left.isDown) { // || (bTouchLeft)) {
 			oArea.oPlayer.setVelocityX(Math.max(oArea.oPlayer.body.velocity.x - 10, -200));
 			oArea.oPlayer.anims.play('left', true);
-		} else if (self.oCursors.right.isDown) { //|| (bTouchRight)) {
+		} else if (this.oCursors.right.isDown) { //|| (bTouchRight)) {
 			oArea.oPlayer.setVelocityX(Math.min(oArea.oPlayer.body.velocity.x + 10, 200));
 			oArea.oPlayer.anims.play('right', true);
 		} else {
 			oArea.oPlayer.setVelocityX(0);
 			oArea.oPlayer.anims.play('turn');
 		}
-		if ((oArea.oPlayer.body.onFloor() || oArea.oPlayer.body.touching.down) && (self.oCursors.up.isDown)) { // || (bTouchUp))) {
+		if ((oArea.oPlayer.body.onFloor() || oArea.oPlayer.body.touching.down) && (this.oCursors.up.isDown)) { // || (bTouchUp))) {
 			oArea.oPlayer.setVelocityY(-350);
 			//bTouchUp = false;
 		}
@@ -528,7 +529,6 @@ class Area {
 		
 		oGame.physics.world.setBounds(0, 0, oGraphic.sizeXpx, oGraphic.sizeYpx);
 		
-		// TODO:
 		oGame.physics.add.collider(this.oElements, this.oPlayer);
 		oGame.physics.add.collider(this.oElements, this.oEnemies);
 		oGame.physics.add.collider(this.oElements, this.oStars);
@@ -830,7 +830,7 @@ class Graphic {
 
 class ButtonRetro {
 	
-	constructor(config) {
+	constructor(oGame, config) {
 		
 		config = config || {};
 		
@@ -855,7 +855,7 @@ class ButtonRetro {
 		oConfig.oText.sFont = text.font || "font_retro";
 		oConfig.oText.iTint = text.tint || null;
 		
-		let oButton = ButtonRetro.oGame.add.image(oConfig.x, oConfig.y, oConfig.sSpriteSheetName, oConfig.frame)
+		let oButton = oGame.add.image(oConfig.x, oConfig.y, oConfig.sSpriteSheetName, oConfig.frame)
 			.setOrigin(0,0)
 			.setInteractive()
 			.setName(oConfig.sName);
@@ -871,7 +871,7 @@ class ButtonRetro {
 		
 		let px = oConfig.x + oConfig.oText.x;
 		let py = oConfig.y + oConfig.oText.y;
-		let oText = ButtonRetro.oGame.add.bitmapText(px, py, oConfig.oText.sFont, oConfig.sTitle)
+		let oText = oGame.add.bitmapText(px, py, oConfig.oText.sFont, oConfig.sTitle)
 			.setOrigin(0,0);
 		
 		if (oConfig.oText.iTint !== null) oText.setTint( oConfig.oText.iTint );
@@ -891,6 +891,18 @@ class ButtonRetro {
 	
 	static setCallback(oInstance, sName, fClick) {
 		ButtonRetro.oaCallbacks[sName] = { oInstance: oInstance, fCallback: fClick };
+	}
+	
+	static hasCallback(sName) {
+		return !! ButtonRetro.oaCallbacks[sName];
+	}
+	
+	static callback(sName) {
+		if (ButtonRetro.oaCallbacks[sName]) {
+			ButtonRetro.oaCallbacks[sName].fCallback.call( ButtonRetro.oaCallbacks[sName].oInstance );
+		} else {
+			console.log("Error in ButtonRetro.callback for sName=\""+sName+"\": callback functions does't exist!");
+		}
 	}
 	
 	static nextCounter() {

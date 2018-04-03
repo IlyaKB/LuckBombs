@@ -1,0 +1,17 @@
+{
+  "name": "LuckBombs",
+  "version": "1.0.0",
+  "description": "Luck Bombs v1.0 - Testing PhaserJS v 3.x",
+  "main": "webapp/index.html",
+  "scripts": {
+    "start": "echo \"Error: no start specified\" && exit 1",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "node-static": "latest"
+  },
+  "devDependencies": {
+  }
+}
