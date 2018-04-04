@@ -1,7 +1,11 @@
+/*
+    2018 © Kalashnikov Ilya (web-applications.ru)
+*/
 var C_MAXLEVELS = 5;
 var Main = function(sDOMElementId) {
   sDOMElementId = sDOMElementId === undefined ? null : sDOMElementId;
   Main._instance = this;
+  var self = this;
   this.oGame = null;
   this.iLevel = parseInt(location.hash.replace(/[\D]/, ""));
   if (!this.iLevel) {
@@ -27,7 +31,14 @@ var Main = function(sDOMElementId) {
   this.bMusic = true;
   addEventListener("load", function() {
     var eDomElement = sDOMElementId ? document.getElementById(sDOMElementId) : null;
-    var oConfig = {type:Phaser.AUTO, width:eDomElement ? eDomElement.clientWidth : window.innerWidth, height:eDomElement ? eDomElement.clientWidth : window.innerHeight, physics:{"default":"arcade", arcade:{gravity:{y:200}, debug:false}}, scene:{preload:this.fPreload, create:this.fCreate, update:this.fUpdate}};
+    var oConfig = {type:Phaser.AUTO, width:eDomElement ? eDomElement.clientWidth : window.innerWidth, height:eDomElement ? eDomElement.clientWidth : window.innerHeight, physics:{"default":"arcade", arcade:{gravity:{y:200}, debug:false}}, scene:{preload:function() {
+      self.oGame = this;
+      self.fPreload(this);
+    }, create:function() {
+      self.fCreate(this);
+    }, update:function() {
+      self.fUpdate(this);
+    }}};
     if (eDomElement) {
       oConfig.parent = sDOMElementId;
     }
@@ -37,33 +48,40 @@ var Main = function(sDOMElementId) {
 Main.getInstance = function() {
   return Main._instance;
 };
-Main.prototype.fPreload = function() {
-  var oGame = this;
-  var self = Main.getInstance();
-  var oGraphic = self.oGraphic;
-  var oArea = self.oArea;
-  self.oGame = oGame;
-  ButtonRetro.oGame = oGame;
+Main.prototype.fPreload = function(oGame) {
+  var oGraphic = this.oGraphic;
+  var oArea = this.oArea;
   oGraphic.preload(oGame, oArea);
-  oGame.load.audio("theme", ["audio/level" + self.iLevel + ".mp3"]);
+  oGame.load.audio("theme", ["audio/level" + this.iLevel + ".mp3"]);
   oGame.load.audioSprite("sfx", ["audio/fx_mixdown.mp3"], "audio/fx_mixdown.json");
 };
-Main.prototype.fCreate = function() {
-  var oGame = this;
-  var self = Main.getInstance();
-  var oGraphic = self.oGraphic;
-  var oArea = self.oArea;
+Main.prototype.fCreate = function(oGame) {
+  var self = this;
+  var oGraphic = this.oGraphic;
+  var oArea = this.oArea;
   oGraphic.init(oGame);
   oArea.init(oGame, oGraphic);
-  oGame.physics.add.overlap(oArea.oEnemies, oArea.oStars, self.collectStarByEnemy, null, self);
-  oGame.physics.add.overlap(oArea.oPlayer, oArea.oStars, self.collectStarByPlayer, null, self);
-  oGame.physics.add.overlap(oArea.oPlayer, oArea.oArmors, self.collectArmorByPlayer, null, self);
-  oGame.physics.add.overlap(oArea.oEnemies, oArea.oArmors, self.collectArmorByEnemy, null, self);
-  oGame.physics.add.overlap(oArea.oStars, oArea.oBombs, self.collectStarByBomb, null, self);
-  oGame.physics.add.overlap(oArea.oArmors, oArea.oBombs, self.collectArmorByBomb, null, self);
-  oGame.physics.add.collider(oArea.oPlayer, oArea.oBombs, self.bombHit, null, self);
+  oGame.physics.add.overlap(oArea.oEnemies, oArea.oStars, this.collectStarByEnemy, null, this);
+  oGame.physics.add.overlap(oArea.oPlayer, oArea.oStars, this.collectStarByPlayer, null, this);
+  oGame.physics.add.overlap(oArea.oPlayer, oArea.oArmors, this.collectArmorByPlayer, null, this);
+  oGame.physics.add.overlap(oArea.oEnemies, oArea.oArmors, this.collectArmorByEnemy, null, this);
+  oGame.physics.add.overlap(oArea.oStars, oArea.oBombs, this.collectStarByBomb, null, this);
+  oGame.physics.add.overlap(oArea.oArmors, oArea.oBombs, this.collectArmorByBomb, null, this);
+  oGame.physics.add.collider(oArea.oPlayer, oArea.oBombs, this.bombHit, null, this);
+  oGame.physics.add.collider(oArea.oElements, oArea.oBombs, this.bombElement, null, this);
+  var bTap = false;
+  this.bTouchLeft = false;
+  this.bTouchRight = false;
+  this.bTouchUp = false;
+  var aY = [], qY = 30, iY = 0, iYprev;
+  for (var i = 0; i < qY; i++) {
+    aY[i] = 0;
+  }
   var sx, sy, cx, cy, bCameraMove = false;
   oGame.input.on("pointerdown", function(oPointer) {
+    bTap = true;
+    this.bTouchLeft = oPointer.x < oArea.oPlayer.x;
+    this.bTouchRight = oPointer.x >= oArea.oPlayer.x;
     sx = oPointer.x;
     sy = oPointer.y;
     cx = oGame.cameras.main.x;
@@ -71,6 +89,22 @@ Main.prototype.fCreate = function() {
     bCameraMove = true;
   });
   oGame.input.on("pointermove", function(oPointer) {
+    if (bTap) {
+      this.bTouchLeft = oPointer.x < oArea.oPlayer.x;
+      this.bTouchRight = oPointer.x >= oArea.oPlayer.x;
+      aY[iY] = oPointer.y;
+      iY++;
+      if (iY > qY) {
+        iY = 0;
+      }
+      iYprev = iY + 1;
+      if (iYprev > qY) {
+        iYprev = 0;
+      }
+      if (aY[iY] < aY[iYprev] - 20) {
+        this.bTouchUp = true;
+      }
+    }
     if (bCameraMove) {
       var dx = oPointer.x - sx;
       var dy = oPointer.y - sy;
@@ -78,12 +112,19 @@ Main.prototype.fCreate = function() {
   });
   oGame.input.on("pointerup", function(oPointer) {
     bCameraMove = false;
+    bTap = false;
+    this.bTouchLeft = false;
+    this.bTouchRight = false;
+    this.bTouchUp = false;
+    for (var i = 0; i < qY; i++) {
+      aY[i] = 0;
+    }
   });
-  self.oCursors = oGame.input.keyboard.createCursorKeys();
+  this.oCursors = oGame.input.keyboard.createCursorKeys();
   oGame.cameras.main.setBounds(-100, -100, oGraphic.sizeXpx + 200, oGraphic.sizeYpx + 200);
   oGame.cameras.main.startFollow(oArea.oPlayer);
   var bMusicPrevious;
-  new ButtonRetro({name:"pause", title:"PAUSE", scrollFactor:[0, 0], scale:[1.6, 2], x:oGraphic.screenWidth - 140, y:oGraphic.screenHeight - 50, text:{x:17, y:12, tint:11184810}, click:function() {
+  new ButtonRetro(oGame, {name:"pause", title:"PAUSE", scrollFactor:[0, 0], scale:[1.6, 2], x:oGraphic.screenWidth - 140, y:oGraphic.screenHeight - 50, text:{x:17, y:12, tint:11184810}, click:function() {
     if (self.bPause) {
       this.setText("PAUSE");
       oGame.physics.resume();
@@ -100,7 +141,7 @@ Main.prototype.fCreate = function() {
     }
     self.bPause = !self.bPause;
   }});
-  new ButtonRetro({name:"music", title:"MUSIC ON", scrollFactor:[0, 0], scale:[2.3, 2], x:16, y:oGraphic.screenHeight - 50, text:{x:17, y:12, tint:65280}, click:function() {
+  new ButtonRetro(oGame, {name:"music", title:"MUSIC " + (this.bMusic ? "ON" : "OFF"), scrollFactor:[0, 0], scale:[2.3, 2], x:16, y:oGraphic.screenHeight - 50, text:{x:17, y:12, tint:65280}, click:function() {
     if (self.oMusic.isPlaying) {
       this.setText("MUSIC OFF");
       this.oText.setTint(11184810);
@@ -112,45 +153,73 @@ Main.prototype.fCreate = function() {
     }
   }});
   oGame.input.on("gameobjectover", function(oPointer, oGameObject) {
-    if (ButtonRetro.oaCallbacks[oGameObject.name]) {
+    if (ButtonRetro.hasCallback(oGameObject.name)) {
       oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 0);
     }
   });
   oGame.input.on("gameobjectout", function(oPointer, oGameObject) {
-    if (ButtonRetro.oaCallbacks[oGameObject.name]) {
+    if (ButtonRetro.hasCallback(oGameObject.name)) {
       oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 1);
     }
   });
   oGame.input.on("gameobjectdown", function(oPointer, oGameObject) {
-    if (ButtonRetro.oaCallbacks[oGameObject.name]) {
+    if (ButtonRetro.hasCallback(oGameObject.name)) {
       oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 2);
     }
-  }, this);
-  oGame.input.on("gameobjectup", function(oPointer, oGameObject) {
-    if (ButtonRetro.oaCallbacks[oGameObject.name]) {
-      oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 0);
-      ButtonRetro.oaCallbacks[oGameObject.name].fCallback.call(ButtonRetro.oaCallbacks[oGameObject.name].oInstance);
-    }
   });
-  self.oScoreText = oGame.add.bitmapText(16, 16, "font_retro", "SCORE:0/" + self.iScoreTarget).setTint(16776960).setScrollFactor(0);
-  self.oHealthText = oGame.add.bitmapText(oGraphic.screenWidth - 220, 16, "font_retro", " HEALTH:100%").setTint(16777215).setScrollFactor(0);
-  var oLevelText = oGame.add.text(oGraphic.screenWidth05 - 80, 3, "Level " + self.iLevel, {fontSize:"48px", fontFamily:"Arial", fill:"rgb(255,255,0)"}).setScrollFactor(0);
+  oGame.input.on("gameobjectup", function(oPointer, oGameObject) {
+    if (ButtonRetro.hasCallback(oGameObject.name)) {
+      oGameObject.frame = oGameObject.scene.textures.getFrame(oGameObject.oConfig.sSpriteSheetName, 0);
+      ButtonRetro.callback(oGameObject.name);
+    }
+  }, this);
+  this.oScoreText = oGame.add.bitmapText(16, 16, "font_retro", "SCORE:0/" + self.iScoreTarget).setTint(16776960).setScrollFactor(0);
+  this.oHealthText = oGame.add.bitmapText(oGraphic.screenWidth - 210, 16, "font_retro", " HEALTH:100%").setTint(16777215).setScrollFactor(0);
+  var oLevelText = oGame.add.text(0, 0, "Level " + self.iLevel, {fontSize:"48px", fontFamily:"Arial", fill:"rgb(255,255,0)"}).setScrollFactor(0);
+  this.alignHV(oLevelText, "center", "center");
   setTimeout(function() {
     oLevelText.destroy();
   }, 3000);
-  self.oMusic = oGame.sound.add("theme");
-  self.music(self.bMusic);
+  var oAboutText = oGame.add.text(0, 0, "LuckBombs v1.0 - Level " + self.iLevel + ", GitHub page: https://github.com/IlyaKB/LuckBombs", {fontSize:"12px", fontFamily:"Arial", fill:"rgb(255,255,255)"}).setScrollFactor(0);
+  this.alignHV(oAboutText, "center", "bottom");
+  this.oMusic = oGame.sound.add("theme");
+  this.music(this.bMusic);
 };
-Main.prototype.fUpdate = function() {
-  var oGame = this;
-  var self = Main.getInstance();
-  var oGraphic = self.oGraphic;
-  var oArea = self.oArea;
-  if (self.oCursors.left.isDown) {
+Main.prototype.alignHV = function(oGameObject, h, v) {
+  h = h === undefined ? "center" : h;
+  v = v === undefined ? "center" : v;
+  var oBounds = oGameObject.getBounds();
+  var x, y;
+  switch(h) {
+    case "left":
+      x = 5;
+      break;
+    case "right":
+      x = this.oGraphic.screenWidth - oBounds.width - 5;
+      break;
+    default:
+      x = this.oGraphic.screenWidth05 - oBounds.width / 2;
+  }
+  switch(v) {
+    case "top":
+      y = 5;
+      break;
+    case "bottom":
+      y = this.oGraphic.screenHeight - oBounds.height - 5;
+      break;
+    default:
+      y = this.oGraphic.screenHeight05 - oBounds.height / 2;
+  }
+  oGameObject.setX(x);
+  oGameObject.setY(y);
+};
+Main.prototype.fUpdate = function(oGame) {
+  var oArea = this.oArea;
+  if (this.oCursors.left.isDown || this.bTouchLeft) {
     oArea.oPlayer.setVelocityX(Math.max(oArea.oPlayer.body.velocity.x - 10, -200));
     oArea.oPlayer.anims.play("left", true);
   } else {
-    if (self.oCursors.right.isDown) {
+    if (this.oCursors.right.isDown || this.bTouchRight) {
       oArea.oPlayer.setVelocityX(Math.min(oArea.oPlayer.body.velocity.x + 10, 200));
       oArea.oPlayer.anims.play("right", true);
     } else {
@@ -158,8 +227,10 @@ Main.prototype.fUpdate = function() {
       oArea.oPlayer.anims.play("turn");
     }
   }
-  if ((oArea.oPlayer.body.onFloor() || oArea.oPlayer.body.touching.down) && self.oCursors.up.isDown) {
+  if ((oArea.oPlayer.body.onFloor() || oArea.oPlayer.body.touching.down) && (this.oCursors.up.isDown || this.bTouchUp)) {
     oArea.oPlayer.setVelocityY(-350);
+    this.bTouchUp = false;
+    this.sound("alien death");
   }
   oArea.oEnemies.children.iterate(function(oEnemy) {
     if (oEnemy.body.velocity.x < -10) {
@@ -191,12 +262,14 @@ Main.prototype.collectStarByPlayer = function(oPlayer, oStar) {
       var px = this.oGraphic.screenWidth05 - 150;
       var py = this.oGraphic.screenHeight05;
       this.oGame.add.text(px, py, "VICTORY!!!", {fontSize:"64px", fontFamily:"Arial", fill:"#0a0"}).setScrollFactor(0);
+      this.sound("numkey");
       this.oMusic.stop();
       this.oGame.physics.pause();
     } else {
       var px$0 = this.oGraphic.screenWidth05 - 200;
       var py$1 = this.oGraphic.screenHeight05;
       this.oGame.add.text(px$0, py$1, "The level is won!", {fontSize:"64px", fontFamily:"Arial", fill:"#ff0"}).setScrollFactor(0);
+      this.sound("numkey");
       this.oMusic.stop();
       this.oGame.physics.pause();
       setTimeout(function() {
@@ -216,10 +289,12 @@ Main.prototype.collectStarByEnemy = function(oEnemy, oStar) {
   oBomb.setCollideWorldBounds(true);
   oBomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
   oBomb.allowGravity = false;
-  var oEmitter = this.oGraphic.oParticles.createEmitter({speed:40, scale:{start:0.05, end:0.01}, blendMode:"ADD"});
+  var oEmitter = this.oGraphic.oParticles.createEmitter({speed:this.iLevel * 10, scale:{start:0.5 + this.iLevel / 10, end:0.1 + this.iLevel / 10}, blendMode:"ADD"});
   oEmitter.startFollow(oBomb);
   oBomb._oEmitter = oEmitter;
-  this.sound("squit");
+  if (this.hasCameraObject(oStar)) {
+    this.sound("squit");
+  }
   this.checkStarsCount();
 };
 Main.prototype.checkStarsCount = function() {
@@ -247,8 +322,10 @@ Main.prototype.collectArmorByPlayer = function(oPlayer, oArmor) {
   this.healthChange(20);
 };
 Main.prototype.collectArmorByEnemy = function(oEnemy, oArmor) {
+  if (this.hasCameraObject(oArmor)) {
+    this.sound("squit");
+  }
   oArmor.disableBody(true, true);
-  this.sound("squit");
 };
 Main.prototype.collectArmorByBomb = function(oArmor, oBomb) {
   oArmor.disableBody(true, true);
@@ -275,6 +352,8 @@ Main.prototype.bombHit = function(oPlayer, oBomb) {
   setTimeout(function() {
     this.oArea.oPlayer.clearTint();
   }.bind(this), 1000);
+};
+Main.prototype.bombElement = function(oElement, oBomb) {
 };
 Main.prototype.healthChange = function(iDelta) {
   this.iHealth += iDelta;
@@ -318,7 +397,22 @@ Main.prototype.bombDetonate = function(oBomb) {
   oBomb.destroy();
   var oDetonate = this.oGame.add.sprite(oBomb.x, oBomb.y, "detonate");
   oDetonate.anims.play("explode");
-  this.sound("shot");
+  if (this.hasCameraObject(oBomb)) {
+    this.sound("shot");
+  }
+};
+Main.prototype.hasCameraObject = function(oGameObject) {
+  var $jscomp$destructuring$var0 = oGameObject.getTopLeft();
+  var iGameObjectLeft = $jscomp$destructuring$var0.x;
+  var iGameObjectTop = $jscomp$destructuring$var0.y;
+  var $jscomp$destructuring$var1 = oGameObject.getBottomRight();
+  var iGameObjectRight = $jscomp$destructuring$var1.x;
+  var iGameObjectBottom = $jscomp$destructuring$var1.y;
+  var iCameraLeft = this.oGame.cameras.main.scrollX;
+  var iCameraTop = this.oGame.cameras.main.scrollY;
+  var iCameraRight = this.oGame.cameras.main.scrollX + this.oGame.cameras.main.width;
+  var iCameraBottom = this.oGame.cameras.main.scrollY + this.oGame.cameras.main.height;
+  return iGameObjectRight > iCameraLeft && iGameObjectLeft < iCameraRight && iGameObjectBottom > iCameraTop && iGameObjectTop < iCameraBottom;
 };
 Main.prototype.music = function(bMusic) {
   if (bMusic) {
@@ -376,7 +470,6 @@ Area.prototype.init = function(oGame, oGraphic) {
   oGame.physics.add.collider(this.oElements, this.oEnemies);
   oGame.physics.add.collider(this.oElements, this.oStars);
   oGame.physics.add.collider(this.oElements, this.oArmors);
-  oGame.physics.add.collider(this.oElements, this.oBombs);
   oGame.physics.add.collider(this.oEnemies, this.oPlayer);
   oGame.physics.add.collider(this.oEnemies, this.oBombs);
   oGame.physics.add.collider(this.oArmors, this.oStars);
@@ -572,7 +665,7 @@ Graphic.prototype.getPX = function(x) {
 Graphic.prototype.getPY = function(y) {
   return this.wh05 + (y - 1) * this.wh;
 };
-var ButtonRetro = function(config) {
+var ButtonRetro = function(oGame, config) {
   config = config || {};
   var oConfig = {};
   var counter = config.name ? "" : ButtonRetro.nextCounter();
@@ -593,7 +686,7 @@ var ButtonRetro = function(config) {
   oConfig.oText.y = text.y || 5;
   oConfig.oText.sFont = text.font || "font_retro";
   oConfig.oText.iTint = text.tint || null;
-  var oButton = ButtonRetro.oGame.add.image(oConfig.x, oConfig.y, oConfig.sSpriteSheetName, oConfig.frame).setOrigin(0, 0).setInteractive().setName(oConfig.sName);
+  var oButton = oGame.add.image(oConfig.x, oConfig.y, oConfig.sSpriteSheetName, oConfig.frame).setOrigin(0, 0).setInteractive().setName(oConfig.sName);
   if (oConfig.oScrollFactor) {
     oButton.setScrollFactor(oConfig.oScrollFactor[0], oConfig.oScrollFactor[1]);
   }
@@ -606,7 +699,7 @@ var ButtonRetro = function(config) {
   ButtonRetro.setCallback(this, oConfig.sName, oConfig.fClick);
   var px = oConfig.x + oConfig.oText.x;
   var py = oConfig.y + oConfig.oText.y;
-  var oText = ButtonRetro.oGame.add.bitmapText(px, py, oConfig.oText.sFont, oConfig.sTitle).setOrigin(0, 0);
+  var oText = oGame.add.bitmapText(px, py, oConfig.oText.sFont, oConfig.sTitle).setOrigin(0, 0);
   if (oConfig.oText.iTint !== null) {
     oText.setTint(oConfig.oText.iTint);
   }
@@ -624,6 +717,16 @@ ButtonRetro.prototype.setText = function(sText) {
 };
 ButtonRetro.setCallback = function(oInstance, sName, fClick) {
   ButtonRetro.oaCallbacks[sName] = {oInstance:oInstance, fCallback:fClick};
+};
+ButtonRetro.hasCallback = function(sName) {
+  return !!ButtonRetro.oaCallbacks[sName];
+};
+ButtonRetro.callback = function(sName) {
+  if (ButtonRetro.oaCallbacks[sName]) {
+    ButtonRetro.oaCallbacks[sName].fCallback.call(ButtonRetro.oaCallbacks[sName].oInstance);
+  } else {
+    console.log('Error in ButtonRetro.callback for sName="' + sName + "\": callback functions does't exist!");
+  }
 };
 ButtonRetro.nextCounter = function() {
   return ++ButtonRetro.iButton;

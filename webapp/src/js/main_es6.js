@@ -2,7 +2,7 @@
 
 /**
  * @author       Kalashnikov Ilya <veddbrus@mail.ru>
- * @copyright    2017 © Kalashnikov Ilya (web-applications.ru)
+ * @copyright    2018 © Kalashnikov Ilya (web-applications.ru)
  */
 
 // TODO: use babel
@@ -39,10 +39,6 @@ class Main {
 		this.iHealth = 100;
 
 		this.iBombDamageBase = 10 + this.iLevel * 2;
-
-		/*var bTouchLeft = false;
-		var bTouchRight = false;
-		var bTouchUp = false;*/
 
 		this.bPause = false;
 		this.bSounds = true;
@@ -115,16 +111,20 @@ class Main {
 		oGame.physics.add.overlap(oArea.oStars, oArea.oBombs, this.collectStarByBomb, null, this);
 		oGame.physics.add.overlap(oArea.oArmors, oArea.oBombs, this.collectArmorByBomb, null, this);
 		oGame.physics.add.collider(oArea.oPlayer, oArea.oBombs, this.bombHit, null, this);
+		oGame.physics.add.collider(oArea.oElements, oArea.oBombs, this.bombElement, null, this);
 		
-		/*let bTap = false;
+		let bTap = false;
+		this.bTouchLeft = false;
+		this.bTouchRight = false;
+		this.bTouchUp = false;
 		let aY = [], qY = 30, iY = 0, iYprev;
-		for (let i = 0; i < qY; i++) aY[i] = 0;*/
+		for (let i = 0; i < qY; i++) aY[i] = 0;
 		let sx, sy, cx, cy, bCameraMove = false;
 		oGame.input.on('pointerdown', function (oPointer) {
-			/*bTap = true;
+			bTap = true;
 			//self.fPrintDebugInfo([				'pointerdown',				'x=' +Math.floor(oPointer.x) + "; y=" + Math.floor(oPointer.y),				'camera: ' + Math.floor(oPointer.camera.scrollX) + ';' + Math.floor(oPointer.camera.scrollY)			]);
-			bTouchLeft = (oPointer.x < screenWidth05);
-			bTouchRight = (oPointer.x >= screenWidth05);*/
+			this.bTouchLeft = (oPointer.x < oArea.oPlayer.x);
+			this.bTouchRight = (oPointer.x >= oArea.oPlayer.x);
 			sx = oPointer.x;
 			sy = oPointer.y;
 			cx = oGame.cameras.main.x;
@@ -132,14 +132,14 @@ class Main {
 			bCameraMove = true;
 		});
 		oGame.input.on('pointermove', function (oPointer) {
-			/*if (bTap) {
-				bTouchLeft = (oPointer.x < screenWidth 05);
-				bTouchRight = (oPointer.x >= screenWidth05);
+			if (bTap) {
+				this.bTouchLeft = (oPointer.x < oArea.oPlayer.x);
+				this.bTouchRight = (oPointer.x >= oArea.oPlayer.x);
 				aY[iY] = oPointer.y;
 				iY++; if (iY > qY) iY = 0;
 				iYprev = iY + 1; if (iYprev > qY) iYprev = 0;
-				if (aY[iY] < aY[iYprev] - 20) bTouchUp = true;
-			}*/
+				if (aY[iY] < aY[iYprev] - 20) this.bTouchUp = true;
+			}
 			if (bCameraMove) {
 				let dx = oPointer.x - sx;
 				let dy = oPointer.y - sy;
@@ -148,11 +148,11 @@ class Main {
 		});
 		oGame.input.on('pointerup', function (oPointer) {
 			bCameraMove = false;
-			/*bTap = false;
-			bTouchLeft = false;
-			bTouchRight = false;
-			bTouchUp = false;
-			for (var i = 0; i < qY; i++) aY[i] = 0;*/
+			bTap = false;
+			this.bTouchLeft = false;
+			this.bTouchRight = false;
+			this.bTouchUp = false;
+			for (var i = 0; i < qY; i++) aY[i] = 0;
 		});
 		
 		this.oCursors = oGame.input.keyboard.createCursorKeys();
@@ -186,7 +186,7 @@ class Main {
 		
 		new ButtonRetro(oGame, {
 			name: "music",
-			title: "MUSIC ON",
+			title: "MUSIC "+(this.bMusic?"ON":"OFF"),
 			scrollFactor: [0,0], scale: [2.3,2],
 			x: 16, y: oGraphic.screenHeight - 50,
 			text: { x: 17, y: 12, tint: 0x00ff00 },
@@ -230,21 +230,44 @@ class Main {
 			.setScrollFactor(0);
 		//Phaser.Display.Align.In.TopLeft(oScoreText, oLand); // TODO: м.б. как-то попроще можно сделать?
 		
-		//var oBounds = oScoreTargetText.getTextBounds(); // TODO: bounds.global.width, bounds.global.height
-		
-		this.oHealthText = oGame.add.bitmapText(oGraphic.screenWidth - 220, 16, 'font_retro', ' HEALTH:100%')
+		this.oHealthText = oGame.add.bitmapText(oGraphic.screenWidth - 210, 16, 'font_retro', ' HEALTH:100%')
 			.setTint(0xffffff).setScrollFactor(0);
 		
-		let oLevelText = oGame.add.text(
-			oGraphic.screenWidth05 - 80, 3, 'Level ' + self.iLevel,
+		let oLevelText = oGame.add.text(0,0, 'Level ' + self.iLevel,
 			{ fontSize: '48px', fontFamily: 'Arial', fill: 'rgb(255,255,0)' }
-		).setScrollFactor(0);
+		)
+			.setScrollFactor(0);
+		this.alignHV(oLevelText, "center","center");
 		setTimeout( function() { oLevelText.destroy(); }, 3000);
+		
+		let oAboutText = oGame.add.text(0,0,
+			'LuckBombs v1.0 - Level ' + self.iLevel + ', GitHub page: https://github.com/IlyaKB/LuckBombs',
+			{ fontSize: '12px', fontFamily: 'Arial', fill: 'rgb(255,255,255)' }
+		)
+			.setScrollFactor(0);
+		this.alignHV(oAboutText,"center","bottom");
 		
 		this.oMusic = oGame.sound.add('theme');
 		this.music(this.bMusic);
 		
 		//let spritemap = oGame.cache.json.get('sfx').spritemap;
+	}
+	
+	alignHV(oGameObject, h = "center", v = "center") {
+		let oBounds = oGameObject.getBounds();
+		let x, y;
+		switch (h) {
+			case "left": x = 5; break;
+			case "right": x = this.oGraphic.screenWidth - oBounds.width - 5; break;
+			default: x = this.oGraphic.screenWidth05 - oBounds.width / 2;
+		}
+		switch (v) {
+			case "top": y = 5; break;
+			case "bottom": y = this.oGraphic.screenHeight - oBounds.height - 5; break;
+			default: y = this.oGraphic.screenHeight05 - oBounds.height / 2;
+		}
+		oGameObject.setX(x);
+		oGameObject.setY(y);
 	}
 
 	fUpdate(oGame) {
@@ -252,19 +275,20 @@ class Main {
 		//let oGraphic = this.oGraphic;
 		let oArea = this.oArea;
 		
-		if (this.oCursors.left.isDown) { // || (bTouchLeft)) {
+		if (this.oCursors.left.isDown || this.bTouchLeft) {
 			oArea.oPlayer.setVelocityX(Math.max(oArea.oPlayer.body.velocity.x - 10, -200));
 			oArea.oPlayer.anims.play('left', true);
-		} else if (this.oCursors.right.isDown) { //|| (bTouchRight)) {
+		} else if (this.oCursors.right.isDown || this.bTouchRight) {
 			oArea.oPlayer.setVelocityX(Math.min(oArea.oPlayer.body.velocity.x + 10, 200));
 			oArea.oPlayer.anims.play('right', true);
 		} else {
 			oArea.oPlayer.setVelocityX(0);
 			oArea.oPlayer.anims.play('turn');
 		}
-		if ((oArea.oPlayer.body.onFloor() || oArea.oPlayer.body.touching.down) && (this.oCursors.up.isDown)) { // || (bTouchUp))) {
+		if ((oArea.oPlayer.body.onFloor() || oArea.oPlayer.body.touching.down) && (this.oCursors.up.isDown || this.bTouchUp)) {
 			oArea.oPlayer.setVelocityY(-350);
-			//bTouchUp = false;
+			this.bTouchUp = false;
+			this.sound("alien death");
 		}
 
 		oArea.oEnemies.children.iterate(function (oEnemy) {
@@ -300,12 +324,14 @@ class Main {
 				let px = this.oGraphic.screenWidth05 - 150;
 				let py = this.oGraphic.screenHeight05;
 				this.oGame.add.text(px, py, 'VICTORY!!!', { fontSize: '64px', fontFamily: 'Arial', fill: '#0a0' }).setScrollFactor(0);
+				this.sound("numkey");
 				this.oMusic.stop();
 				this.oGame.physics.pause();
 			} else {
 				let px = this.oGraphic.screenWidth05 - 200;
 				let py = this.oGraphic.screenHeight05;
 				this.oGame.add.text(px, py, 'The level is won!', { fontSize: '64px', fontFamily: 'Arial', fill: '#ff0' }).setScrollFactor(0);
+				this.sound("numkey");
 				this.oMusic.stop();
 				this.oGame.physics.pause();
 				setTimeout( function() {
@@ -328,14 +354,16 @@ class Main {
 		oBomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
 		oBomb.allowGravity = false;
 		let oEmitter = this.oGraphic.oParticles.createEmitter({
-			speed: 40,
-			scale: { start: 0.05, end: 0.01 },
+			speed: this.iLevel * 10,
+			scale: { start: 0.5+this.iLevel/10, end: 0.1+this.iLevel/10 },
 			blendMode: 'ADD'
 		});
 		oEmitter.startFollow(oBomb);
 		oBomb._oEmitter = oEmitter;
 		
-		this.sound("squit")
+		if (this.hasCameraObject(oStar)) {
+			this.sound("squit");
+		}
 
 		this.checkStarsCount();
 	}
@@ -371,8 +399,10 @@ class Main {
 	}
 	
 	collectArmorByEnemy(oEnemy, oArmor) {
+		if (this.hasCameraObject(oArmor)) {
+			this.sound("squit");
+		}
 		oArmor.disableBody(true, true);
-		this.sound("squit");
 	}
 	
 	collectArmorByBomb(oArmor, oBomb) {
@@ -407,6 +437,10 @@ class Main {
 			//this.physics.resume();
 			this.oArea.oPlayer.clearTint();
 		}.bind(this), 1000);
+	}
+	
+	bombElement(oElement, oBomb) {
+		//
 	}
 	
 	healthChange(iDelta) {
@@ -450,7 +484,24 @@ class Main {
 		let oDetonate = this.oGame.add.sprite(oBomb.x, oBomb.y, 'detonate');
 		oDetonate.anims.play('explode');
 		
-		this.sound("shot");
+		if (this.hasCameraObject(oBomb)) {
+			this.sound("shot");
+		}
+	}
+	
+	hasCameraObject(oGameObject) {
+		let {x: iGameObjectLeft, y: iGameObjectTop} = oGameObject.getTopLeft();
+		let {x: iGameObjectRight, y: iGameObjectBottom} = oGameObject.getBottomRight();
+		let iCameraLeft = this.oGame.cameras.main.scrollX;// - this.oGame.cameras.main.width / 2;
+		let iCameraTop = this.oGame.cameras.main.scrollY;// - this.oGame.cameras.main.height / 2;
+		let iCameraRight = this.oGame.cameras.main.scrollX + this.oGame.cameras.main.width;// / 2;
+		let iCameraBottom = this.oGame.cameras.main.scrollY + this.oGame.cameras.main.height;// / 2;
+		return (
+			(iGameObjectRight > iCameraLeft) &&
+			(iGameObjectLeft < iCameraRight) &&
+			(iGameObjectBottom > iCameraTop) &&
+			(iGameObjectTop < iCameraBottom)
+		);
 	}
 	
 	music(bMusic) {
@@ -533,7 +584,6 @@ class Area {
 		oGame.physics.add.collider(this.oElements, this.oEnemies);
 		oGame.physics.add.collider(this.oElements, this.oStars);
 		oGame.physics.add.collider(this.oElements, this.oArmors);
-		oGame.physics.add.collider(this.oElements, this.oBombs);
 		oGame.physics.add.collider(this.oEnemies, this.oPlayer);
 		oGame.physics.add.collider(this.oEnemies, this.oBombs);
 		oGame.physics.add.collider(this.oArmors, this.oStars);

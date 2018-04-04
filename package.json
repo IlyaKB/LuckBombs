@@ -4,14 +4,26 @@
   "description": "Luck Bombs v1.0 - Testing PhaserJS v 3.x",
   "main": "webapp/index.html",
   "scripts": {
-    "start": "echo \"Error: no start specified\" && exit 1",
-    "test": "echo \"Error: no test specified\" && exit 1"
+	"start": "server/server.js",
+	"start_todo": "npm run build_todo && npm run start",
+	"watch_todo": "todo",
+	"build_todo": "webpack",
+	"test_todo": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IlyaKB/LuckBombs.git"
+  },
+  "author": "Kalashnikov Ilya <veddbrus@mail.ru> (http://web-applications.ru/LuckBombs)",
   "license": "MIT",
+  "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
+  "bugs": {
+    "url": "https://github.com/IlyaKB/LuckBombs/issues"
+  },
+  "homepage": "https://github.com/IlyaKB/LuckBombs#readme",
   "dependencies": {
-    "node-static": "latest"
   },
   "devDependencies": {
+	"node-static": "latest"
   }
 }
