@@ -2,6 +2,8 @@
 
 LuckBombs - Testing PhaseJS v 3.x
 
+![Скриншот](https://github.com/IlyaKB/LuckBombs/raw/master/screenshot.png)
+
 ### Requirements
 
 We need [Node.js](https://nodejs.org) to install and run scripts.
