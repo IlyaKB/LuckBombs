@@ -2,13 +2,13 @@
   "name": "LuckBombs",
   "version": "1.0.0",
   "description": "Luck Bombs v1.0 - Testing PhaserJS v 3.x",
-  "main": "webapp/index.html",
+  "main": "docs/index.html",
   "scripts": {
-	"start": "server/server.js",
-	"start_todo": "npm run build_todo && npm run start",
-	"watch_todo": "todo",
-	"build_todo": "webpack",
-	"test_todo": "echo \"Error: no test specified\" && exit 1"
+    "start": "server/server.js",
+    "start_todo": "npm run build_todo && npm run start",
+    "watch_todo": "todo",
+    "build_todo": "webpack",
+    "test_todo": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -21,9 +21,8 @@
     "url": "https://github.com/IlyaKB/LuckBombs/issues"
   },
   "homepage": "https://github.com/IlyaKB/LuckBombs#readme",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
-	"node-static": "latest"
+    "node-static": "latest"
   }
 }

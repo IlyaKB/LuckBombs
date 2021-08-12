@@ -13,7 +13,7 @@ var static = require('node-static');
 var file = new static.Server('.', { cache: 0, headers: {'X-Hello':'World!'} });
 
 require('http').createServer(function (request, response) {
-	request.url = "webapp/" + request.url;
+	request.url = "docs/" + request.url;
 	//console.error(request.url + "webapp/");
 	file.serve(request, response, function (err, res) {
 		if (err) { // An error as occured
